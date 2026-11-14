@@ -2,6 +2,11 @@
 
 A bash script for macOS that automatically turns on **Low Power Mode** when the Mac heats up and turns it off when the Mac cools down. Useful for MacBook Air (which has no fan) or whenever you want the machine to shed heat earlier.
 
+## Screenshot
+We can check the Thermal State with tool hot from https://github.com/macmade/Hot
+<img width="947" height="718" alt="image" src="https://github.com/user-attachments/assets/77efd681-1eae-4370-b62c-5c20cf11244d" />
+
+
 ## How it works
 
 The script reads the Mac's thermal pressure level through `notifyutil` and checks it every few seconds:
