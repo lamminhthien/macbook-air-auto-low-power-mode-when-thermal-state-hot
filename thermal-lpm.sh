@@ -8,7 +8,7 @@
 set -euo pipefail
 
 KEY="com.apple.system.thermalpressurelevel"
-ON_LEVEL=1        # enable LPM when level >= this value
+ON_LEVEL=2        # enable LPM when level >= this value
 OFF_LEVEL=0       # disable LPM when level <= this value
 INTERVAL=10       # seconds between checks
 MIN_HOLD=60       # minimum seconds between two LPM changes
