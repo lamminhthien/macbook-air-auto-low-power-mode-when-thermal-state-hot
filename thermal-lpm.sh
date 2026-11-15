@@ -59,18 +59,6 @@ temperature() {
   fi
 }
 
-# Show a native macOS notification in the logged-in user's session.
-notify() {
-  local title="$1" msg="$2" user uid
-  user="${SUDO_USER:-$(stat -f%Su /dev/console)}"
-  uid="$(id -u "$user" 2>/dev/null || true)"
-  [[ -n "$uid" ]] || return 0
-  launchctl asuser "$uid" sudo -u "$user" osascript \
-    -e 'on run {t, m}' \
-    -e 'display notification m with title t' \
-    -e 'end run' "$title" "$msg" >/dev/null 2>&1 || true
-}
-
 set_lpm() {
   pmset -a lowpowermode "$1"
 }
@@ -117,13 +105,11 @@ while true; do
         LAST_CHANGE=$now
         temp="$(temperature "$level")"
         echo "$(date '+%H:%M:%S') level=$level temp=[$temp] -> Low Power Mode ON"
-        notify "Low Power Mode ON" "Low Power Mode enabled ($temp)"
       elif (( level <= OFF_LEVEL )) && [[ "$current" == "1" ]]; then
         set_lpm 0
         LAST_CHANGE=$now
         temp="$(temperature "$level")"
         echo "$(date '+%H:%M:%S') level=$level temp=[$temp] -> Low Power Mode OFF"
-        notify "Low Power Mode OFF" "Low Power Mode disabled ($temp)"
       fi
     fi
   fi
