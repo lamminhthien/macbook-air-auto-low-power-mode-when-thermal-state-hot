@@ -36,6 +36,41 @@ lpm_state() {
   pmset -g | awk '/lowpowermode/ {print $2; exit}'
 }
 
+# Best-effort temperature. Apple Silicon exposes no CPU temperature without
+# third-party tools, so fall back to the thermal pressure level name.
+temperature() {
+  local t=""
+  if command -v osx-cpu-temp >/dev/null 2>&1; then
+    t="$(osx-cpu-temp 2>/dev/null | head -1 || true)"
+  fi
+  if [[ -z "$t" || "$t" == "0.0"* ]]; then
+    t="$(powermetrics -n1 -i1 --samplers smc 2>/dev/null | awk -F': ' '/CPU die temperature/ {print $2; exit}' || true)"
+  fi
+  if [[ -n "$t" ]]; then
+    echo "$t"
+  else
+    case "${1:-}" in
+      0) echo "thermal: nominal" ;;
+      1) echo "thermal: moderate" ;;
+      2) echo "thermal: heavy" ;;
+      3) echo "thermal: trapping" ;;
+      *) echo "thermal level ${1:-unknown}" ;;
+    esac
+  fi
+}
+
+# Show a native macOS notification in the logged-in user's session.
+notify() {
+  local title="$1" msg="$2" user uid
+  user="${SUDO_USER:-$(stat -f%Su /dev/console)}"
+  uid="$(id -u "$user" 2>/dev/null || true)"
+  [[ -n "$uid" ]] || return 0
+  launchctl asuser "$uid" sudo -u "$user" osascript \
+    -e 'on run {t, m}' \
+    -e 'display notification m with title t' \
+    -e 'end run' "$title" "$msg" >/dev/null 2>&1 || true
+}
+
 set_lpm() {
   pmset -a lowpowermode "$1"
 }
@@ -80,11 +115,15 @@ while true; do
       if (( level >= ON_LEVEL )) && [[ "$current" != "1" ]]; then
         set_lpm 1
         LAST_CHANGE=$now
-        echo "$(date '+%H:%M:%S') level=$level -> Low Power Mode ON"
+        temp="$(temperature "$level")"
+        echo "$(date '+%H:%M:%S') level=$level temp=[$temp] -> Low Power Mode ON"
+        notify "Low Power Mode ON" "Low Power Mode enabled ($temp)"
       elif (( level <= OFF_LEVEL )) && [[ "$current" == "1" ]]; then
         set_lpm 0
         LAST_CHANGE=$now
-        echo "$(date '+%H:%M:%S') level=$level -> Low Power Mode OFF"
+        temp="$(temperature "$level")"
+        echo "$(date '+%H:%M:%S') level=$level temp=[$temp] -> Low Power Mode OFF"
+        notify "Low Power Mode OFF" "Low Power Mode disabled ($temp)"
       fi
     fi
   fi
