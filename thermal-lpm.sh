@@ -51,15 +51,22 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-ORIGINAL_LPM="$(lpm_state)"
+ORIGINAL_LPM="$(lpm_state || true)"
+if [[ "$ORIGINAL_LPM" != "0" && "$ORIGINAL_LPM" != "1" ]]; then
+  echo "Cannot read Low Power Mode state; this Mac may not support it." >&2
+  exit 1
+fi
 LAST_CHANGE=0
 
 restore() {
+  trap - EXIT
   echo
   echo "Stopping. Restoring Low Power Mode to: $ORIGINAL_LPM"
-  set_lpm "$ORIGINAL_LPM"
+  set_lpm "$ORIGINAL_LPM" || true
 }
-trap restore EXIT INT TERM
+trap restore EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 echo "Started. Enable LPM at level >= $ON_LEVEL, disable at level <= $OFF_LEVEL. Press Ctrl+C to stop."
 
